@@ -1,6 +1,7 @@
+library(ggplot2)
 
-getdata <- function(){
+getplot <- function(id){
         data(mtcars)
-        mtcars
+        g <- qplot(mpg, wt, data = mtcars, colour = as.factor(cyl))
+        g + ggtitle(paste("plot for ", id, sep=""))
 }
-

@@ -1,33 +1,54 @@
+###########################
+## MYSQL SERVER SETTINGS ##
+###########################
+## MYSQL Database config ##
+##    for responses      ##
+###########################
+
+library(RMySQL)
+
+        host = "localhost"
+        port = 3306
+        user =  "root"
+        password =  "mysql"
+        databaseName = "shinydatabase"
+        table = "responses"
+
+# code to test database connection
+# mydb <- dbConnect(MySQL(), host=host, port = port, user=user, password=password, dbname=databaseName)
+# dbListTables(mydb)
+
+###########################
+######  SHINY SERVER ######
+###########################
+
 shinyServer(function(input, output, session) {
         
-        # Parse the GET query string
-        # Provide data though format url?variable1=value1&variable2=value2
-        # In this case ?name=id
+        # The id is captured through the URL (?name=id)
+        # query <- parseQueryString(session$clientData$url_search)
+
+        # Welcome message
         output$queryText <- renderText({
                 query <- parseQueryString(session$clientData$url_search)
-                
-                # Return a string with key-value pairs
                 paste("Hello ", query, ", welcome back to your personal research environment.", sep="")
         })
         
-        # Fetch the plot/data related to the ID in the url
+        # Show personal data (based on id)
         output$plot <- renderPlot({
+                query <- parseQueryString(session$clientData$url_search)
                 source("dummydata.R")
-                library(ggplot2)
-                data <- getdata()
-                qplot(mpg, wt, data = data, colour = as.factor(cyl))
+                getplot(query)
         })
         
         # Store respondent feedback
-        library(RMySQL)
-        
         options(mysql = list(
-                "host" = "localhost",
-                "user" = "root",
-                "password" = "mysql"
+                "host" = host,
+                "user" = user,
+                "password" = password,
+                "port" = port
         ))
-        databaseName <- "shinydatabase"
-        table <- "responses"
+        databaseName <- databaseName
+        table <- table
         
         saveData <- function(data) {
                 # Connect to the database
@@ -56,3 +77,6 @@ shinyServer(function(input, output, session) {
                 
         }
 })
+
+
+
