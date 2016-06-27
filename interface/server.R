@@ -6,17 +6,21 @@
 ###########################
 
 library(RMySQL)
+Sys.setenv(MYSQL_HOME = "/var/run/")
 
-        host = "localhost"
-        port = 3306
-        user =  "root"
-        password =  "mysql"
-        databaseName = "shinydatabase"
-        table = "responses"
+        host = # localhost
+        port = # port
+        user =  # user
+        password =  # pass
+        databaseName = # mySQL database
+        table = # tables where answers should be stored
 
-# code to test database connection
-# mydb <- dbConnect(MySQL(), host=host, port = port, user=user, password=password, dbname=databaseName)
-# dbListTables(mydb)
+
+#######################
+## define data fiels ##
+#######################
+
+fields <- c("response1", "response2")
 
 ###########################
 ######  SHINY SERVER ######
@@ -27,17 +31,17 @@ shinyServer(function(input, output, session) {
         # The id is captured through the URL (?name=id)
         # query <- parseQueryString(session$clientData$url_search)
 
-        # Welcome message
+        # Personal welcome message
         output$queryText <- renderText({
                 query <- parseQueryString(session$clientData$url_search)
-                paste("Hello ", query, ", welcome back to your personal research environment.", sep="")
+                paste("Hello ", query, ", welcome (back) to your personal research environment.", sep="")
         })
         
         # Show personal data (based on id)
         output$plot <- renderPlot({
-                query <- parseQueryString(session$clientData$url_search)
+                id <- parseQueryString(session$clientData$url_search)
                 source("dummydata.R")
-                getplot(query)
+                getplot(id)
         })
         
         # Store respondent feedback
@@ -47,35 +51,62 @@ shinyServer(function(input, output, session) {
                 "password" = password,
                 "port" = port
         ))
-        databaseName <- databaseName
-        table <- table
         
-        saveData <- function(data) {
-                # Connect to the database
-                db <- dbConnect(MySQL(), dbname = databaseName, host = options()$mysql$host, 
-                                port = options()$mysql$port, user = options()$mysql$user, 
-                                password = options()$mysql$password)
-                # Construct the update query by looping over the data fields
-                query <- sprintf("INSERT INTO %s (%s) VALUES ('%s')", table,input$var1,input$var2)
-                print(query)
-                # Submit the update query and disconnect
-                dbGetQuery(db, query)
-                dbDisconnect(db)
-        }
-        
-        loadData <- function() {
-                # Connect to the database
-                db <- dbConnect(MySQL(), dbname = databaseName, host =    options()$mysql$host, 
-                                port = options()$mysql$port, user = options()$mysql$user, 
-                                password = options()$mysql$password)
-                # Construct the fetching query
-                query <- sprintf("SELECT * FROM %s", table)
-                # Submit the fetch query and disconnect
-                data <- dbGetQuery(db, query)
-                dbDisconnect(db)
-                data
+                saveData <- function(data) {
+                        # Connect to the database
+                        db <- dbConnect(MySQL(), dbname = databaseName, host = options()$mysql$host, 
+                                        port = options()$mysql$port, user = options()$mysql$user, 
+                                        password = options()$mysql$password)
+                        # Construct the update query by looping over the data fields
+                        query <- sprintf(
+                                "INSERT INTO %s (%s) VALUES ('%s')",
+                                table, 
+                                paste(names(data), collapse = ", "),
+                                paste(data, collapse = "', '")
+                        )
+                        # Submit the update query and disconnect
+                        dbGetQuery(db, query)
+                        dbDisconnect(db)
+                }
                 
-        }
+                loadData <- function() {
+                        # Connect to the database
+                        db <- dbConnect(MySQL(), dbname = databaseName, host = options()$mysql$host, 
+                                        port = options()$mysql$port, user = options()$mysql$user, 
+                                        password = options()$mysql$password)
+                        # Construct the fetching query
+                        query <- sprintf("SELECT * FROM %s", table)
+                        # Submit the fetch query and disconnect
+                        data <- dbGetQuery(db, query)
+                        dbDisconnect(db)
+                        data
+                }
+        
+                # Whenever a field is filled, aggregate all form data
+                formData <- reactive({
+                        data <- sapply(fields, function(x) input[[x]])
+                        data
+                })
+                
+                # When the Submit button is clicked, save the form data
+                observeEvent(input$submit, {
+                        saveData(formData())
+                })
+                
+                # Show the previous responses
+                # (update with current response when Submit is clicked)
+                output$responses <- DT::renderDataTable({
+                        input$submit
+                        loadData()
+                })
+                
+                # confirmation message
+                observeEvent(input$submit, {
+                        saveData(formData())
+                        shinyjs::reset("form")
+                        shinyjs::hide("form")
+                        shinyjs::show("thankyou_msg")
+                })
 })
 
 
