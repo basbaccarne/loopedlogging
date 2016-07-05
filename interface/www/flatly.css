@@ -7023,3 +7023,12 @@ a.list-group-item-danger.active:focus {
 .popover {
   color: #2c3e50;
 }
+
+.footer{
+	margin-top:80px;
+	margin-bottom:80px
+}
+
+img.right-footer {
+    margin-top: -18px;
+}
